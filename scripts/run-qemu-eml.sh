@@ -90,12 +90,17 @@ assert_exists() {
     fi
 }
 
-assert_exists arch/x86/boot/bzImage
-assert_exists /usr/share/OVMF/OVMF_CODE.fd
-assert_exists /usr/share/OVMF/OVMF_VARS.fd
-assert_exists /usr/share/OVMF/UefiShell.iso
+FEDORA=
+if [ ! -f /etc/fedora-release ]; then
+    FEDORA=$HOME/fedora
+fi
 
-cp /usr/share/OVMF/OVMF_VARS.fd eml_VARS.fd
+assert_exists arch/x86/boot/bzImage
+assert_exists $FEDORA/usr/share/OVMF/OVMF_CODE.fd
+assert_exists $FEDORA/usr/share/OVMF/OVMF_VARS.fd
+assert_exists $FEDORA/usr/share/OVMF/UefiShell.iso
+
+cp $FEDORA/usr/share/OVMF/OVMF_VARS.fd eml_VARS.fd
 
 imgsize="$(add "$(align_up "$(align_up "$(size arch/x86/boot/bzImage)" "$(blksize arch/x86/boot/bzImage)")" 4194304)" 2097152)"
 if [ -f initramfs.cpio.gz ]; then
@@ -145,13 +150,19 @@ sudo brctl addif virbr0 vnet${tapnum}
 sudo ip link set vnet${tapnum} up
 sudo ip link set virbr0 up
 
-strace -o /home/pjones/devel/kernel.org/linux/efi-mode-linux/rqe.strace -v -f -s1024 -tt qemu-system-x86_64 \
+CPU=Skylake-Client
+if [ ! -z "$(grep GenuineIntel /proc/cpuinfo)" ]; then
+    # get spectre'd upon
+    CPU+="-IBRS,hle=off,rtm=off"
+fi
+
+strace -o $PWD/rqe.strace -v -f -s1024 -tt qemu-system-x86_64 \
     -machine accel=kvm \
     -name guest=efi-mode-linux,debug-threads=on \
     -machine pc-q35-2.10,accel=kvm,usb=off,vmport=off,smm=on,dump-guest-core=off \
-    -cpu Skylake-Client \
+    -cpu $CPU \
     -global driver=cfi.pflash01,property=secure,value=on \
-    -drive file=/usr/share/OVMF/OVMF_CODE.fd,if=pflash,format=raw,unit=0,readonly=on \
+    -drive file=$FEDORA/usr/share/OVMF/OVMF_CODE.fd,if=pflash,format=raw,unit=0,readonly=on \
     -drive file="$PWD/eml_VARS.fd",if=pflash,format=raw,unit=1 \
     -m 2048 \
     -overcommit mem-lock=off \
@@ -176,7 +187,7 @@ strace -o /home/pjones/devel/kernel.org/linux/efi-mode-linux/rqe.strace -v -f -s
     -device virtio-serial-pci,id=virtio-serial0,bus=pci.2,addr=0x0 \
     -drive file="$PWD/eml.img",format=raw,if=none,id=drive-virtio-disk0 \
     -device virtio-blk-pci,scsi=off,bus=pci.3,addr=0x0,drive=drive-virtio-disk0,id=virtio-disk0,bootindex=2 \
-    -drive file=/usr/share/OVMF/UefiShell.iso,format=raw,if=none,id=drive-sata0-0-0,media=cdrom,readonly=on \
+    -drive file=$FEDORA/usr/share/OVMF/UefiShell.iso,format=raw,if=none,id=drive-sata0-0-0,media=cdrom,readonly=on \
     -device ide-cd,bus=ide.0,drive=drive-sata0-0-0,id=sata0-0-0,bootindex=1 \
     -device qxl-vga,id=video0,ram_size=67108864,vram_size=67108864,vram64_size_mb=0,vgamem_mb=16,max_outputs=1,bus=pcie.0,addr=0x1 \
     -device virtio-balloon-pci,id=balloon0,bus=pci.5,addr=0x0 \
