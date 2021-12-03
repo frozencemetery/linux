@@ -31,10 +31,11 @@ static struct bs_ctx bs_ctx;
 
 void efi_bs_ingress(void)
 {
-	set_current_state(TASK_UNINTERRUPTIBLE);
-	preempt_disable();
+	/* set_current_state(TASK_UNINTERRUPTIBLE); */
+	/* preempt_disable(); */
 
-	/* TODO: disable interrupts */
+	arch_local_irq_disable();
+
 	/* Optional TODO: swap page tables */
 	/* TODO: swap interrupt handlers */
 
@@ -44,12 +45,13 @@ void efi_bs_ingress(void)
 
 void efi_bs_egress(void)
 {
-	preempt_enable();
-	set_current_state(TASK_INTERRUPTIBLE);
+	/* preempt_enable(); */
+	/* set_current_state(TASK_INTERRUPTIBLE); */
 
 	/* TODO: swap interrupt handlers */
 	/* Optional TODO: swap page tables */
-	/* TODO: enable interrupts */
+
+	arch_local_irq_enable();
 
 	reinit_completion(&bs_ctx.bs_context_entry);
 	complete(&bs_ctx.bs_context_exit);
