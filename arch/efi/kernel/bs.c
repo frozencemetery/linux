@@ -31,6 +31,8 @@ static struct bs_ctx bs_ctx;
 
 void efi_bs_ingress(void)
 {
+	printk("++ efi_bs_ingress \n");
+
 	/* set_current_state(TASK_UNINTERRUPTIBLE); */
 	/* preempt_disable(); */
 
@@ -45,6 +47,8 @@ void efi_bs_ingress(void)
 
 void efi_bs_egress(void)
 {
+	printk("++ efi_bs_egress \n");
+
 	/* preempt_enable(); */
 	/* set_current_state(TASK_INTERRUPTIBLE); */
 
@@ -74,6 +78,8 @@ void bs_handle_timer(efi_event_t event, void *context)
 
 int bs_set_timer(u32 ms)
 {
+	printk("++ bs_set_timer \n");
+
 #if 0 /* once we can do EFI calls from here */
 	efi_status_t status;
 
@@ -115,7 +121,7 @@ static int bs_thread(void *data)
 		return efi_status_to_err(status);
 #endif
 
-	printk("in bs_thread\n");
+	printk("++ bs_thread \n");
 	while (1) {
 		if (unlikely(kthread_should_stop())) {
 			set_current_state(TASK_RUNNING);
@@ -142,6 +148,8 @@ static int bs_thread(void *data)
 int __init efi_bs_init(efi_system_table_t *systab)
 {
 	int rc = 0;
+
+	printk("++ efi_bs_init \n");
 
 	init_completion(&bs_ctx.bs_context_entry);
 	init_completion(&bs_ctx.bs_context_exit);
